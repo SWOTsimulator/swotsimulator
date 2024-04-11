@@ -111,6 +111,8 @@ def load_coordinate_model(p):
         filename = _filename
         model_data = model_data_ctor(p, nfile=filename, lon=p.lon, lat=p.lat,
                                      var=p.var)
+    else:
+        model_data = None
     return model_data, list_file
 
 
@@ -180,7 +182,6 @@ def interpolate_regular_1D(p, lon_in, lat_in, var, lon_out, lat_out,
             _tmp = interp(lat_in, lon_in[ind_in2], var_mask[:, ind_in2[0]],
                           kx=1, ky=1, s=0)
             var_out[ind_out2] = _tmp.ev(lat_out[ind_out2], lon_out[ind_out2])
-        print('bouh1', numpy.shape(var_out))
     else:
         mask_teval = (numpy.isnan(var) | numpy.ma.getmaskarray(var))
         # Interpolate mask if it has not been done (Teval is None)
@@ -197,7 +198,6 @@ def interpolate_regular_1D(p, lon_in, lat_in, var, lon_out, lat_out,
         # Interpolate variable
         _var_out = interp(lat_in, lon_in, var_mask, kx=1, ky=1, s=0)
         var_out = _var_out.ev(lat_out, lon_out)
-        print('bouh2', numpy.shape(var_out), numpy.shape(Teval))
 
     ## Mask variable with Teval
     #var_out[Teval > 0] = numpy.nan
@@ -476,6 +476,7 @@ def create_SWOTlikedata(cycle, list_file, modelbox, sgrid, ngrid,
                         geomdef = pr.geometry.SwathDefinition
                         interp = interpolate_irregular_pyresample
                         lon_model = wrap_lon(lon_model)
+                        sigm = 6.
                         if model_data.len_coord <= 1:
                             logger.error('Model grid is irregular,'
                                          'coordinates should be in 2d')
@@ -491,7 +492,7 @@ def create_SWOTlikedata(cycle, list_file, modelbox, sgrid, ngrid,
                                 for iinput_var in var_list:
                                     _ssh = interp(swath_def, iinput_var[key],
                                                   grid_def,
-                                                  max(p.delta_al, p.delta_ac),
+                                                  max(p.delta_al, p.delta_ac)*sigm,
                                                   interp_type=p.interpolation)
                                     slist.append(_ssh.reshape(nal, nac))
                                 _tmp = alpha * slist[0] + (1 - alpha) * slist[1]
@@ -592,7 +593,11 @@ def create_SWOTlikedata(cycle, list_file, modelbox, sgrid, ngrid,
                 else:
                     del ind_time, input_var, model_step
     if nadir_alone is False:
-        err.make_error(sgrid, cycle, out_var['ssh_true'], p)
+        if 'swh' in out_var.keys():
+            swh = out_var['swh']
+        else:
+            swh = None
+        err.make_error(sgrid, cycle, out_var['ssh_true'], p, swh=swh)
         if p.product_type != 'expert':
             err.reconstruct_2D(p, sgrid.x_ac)
             err.make_SSH_error(out_var['ssh_true'], p)

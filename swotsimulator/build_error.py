@@ -173,7 +173,7 @@ class error():
                 self.A_radio_l, self.phi_radio_l, self.fr_radio_l = gencoef
 
 
-    def make_error(self, sgrid, cycle, SSH_true, p):
+    def make_error(self, sgrid, cycle, SSH_true, p, swh=None):
         ''' Build errors corresponding to each selected noise
         among the effect of the wet_tropo, the phase between the two signals,
         the timing error, the roll of the satellite, the sea surface bias,
@@ -185,8 +185,8 @@ class error():
         # ind_al=numpy.arange(0,nal)
         if 'Karin' in p.noise:
             error_karin = comp_error.Karin(p)
-            # TODO tmp swh varying in space
-            swh = 0 * SSH_true + p.swh
+            if swh is None:
+                swh = 0 * SSH_true + p.swh
             seed = int(sgrid.x_al[0]+sgrid.al_cycle)
             dic_error = error_karin.generate(seed, sgrid.x_al, sgrid.x_ac,
                                               swh)
